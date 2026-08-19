@@ -11,3 +11,9 @@
 - Expected: an “active” request would fill live-token capacity, allowing the next request to exercise the bounded queue.
 - Actual: that setup request exceeded the per-request limit and was shed by an earlier control, so the next request was correctly admitted into otherwise empty capacity.
 - Next time: assert the setup decision before asserting a later boundary, and choose fixtures that visibly satisfy every earlier precondition in the decision order.
+
+## Assert decision evidence at the right collection level
+
+- Expected: a substring assertion would confirm that the TPOT gate caused rollback.
+- Actual: `assertIn` searched for an abbreviated string as an exact tuple member, even though the tuple correctly contained the full deciding message.
+- Next time: use exact membership for stable control codes/messages, or inspect a specific message when intentionally checking a substring; do not blur the two forms.
