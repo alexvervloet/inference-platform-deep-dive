@@ -75,6 +75,13 @@ class AdmissionController:
         `estimated_queue_seconds` is an observed/modelled scheduling input, not an
         SLO guarantee. Production controllers should segment estimates by workload,
         account for preemption, and expose retry/backoff behavior to clients.
+
+        Decisions are retained by request id until `release`, and a shed request is
+        never released, so its rejection is permanent and its entry is never reclaimed.
+        That keeps a retry storm from re-rolling the dice on a request already refused,
+        but a real controller needs the opposite behavior too: a bounded time-to-live
+        so a client that backs off and retries can be judged against current capacity,
+        and eviction so the table cannot grow with every rejected request.
         """
 
         if request.identifier in self._decisions:
