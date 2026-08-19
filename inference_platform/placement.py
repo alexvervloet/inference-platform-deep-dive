@@ -54,6 +54,11 @@ def place_replica(
     reserve the chosen devices atomically because another scheduler may race between
     this plan and allocation. It does not infer bandwidth from a node name; callers
     should express requirements such as `fast-collective` as capabilities.
+
+    Ranking enumerates every eligible combination, which is clear to read and fine at
+    lesson scale but grows as C(eligible, gpus_required). A cluster-sized scheduler
+    groups candidates by node and prunes before ranking; treat the exhaustive search
+    here as a statement of the objective, not the algorithm to ship.
     """
 
     if not request.replica.strip() or not request.model_revision.strip():
