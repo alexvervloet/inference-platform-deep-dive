@@ -48,6 +48,28 @@ class FleetPlanTests(unittest.TestCase):
         self.assertNotIn("gpu-placement", report["observed_evidence"])
         self.assertIn("memory", report["deciding_reasons"]["gpu-placement"])
 
+    def test_placement_reserves_the_memory_the_fit_check_actually_computed(self) -> None:
+        decisions = run_plan()["decisions"]
+        self.assertGreater(decisions["memory"]["kv_gib_per_gpu"], 0)
+        self.assertAlmostEqual(
+            decisions["parallelism"]["memory_gib_per_gpu"],
+            decisions["memory"]["required_gib_per_gpu"],
+        )
+
+    def test_inventory_that_fits_weights_but_not_kv_is_not_placeable(self) -> None:
+        decisions = run_plan()["decisions"]
+        weights_and_runtime = (
+            decisions["memory"]["weight_gib_per_gpu"]
+            + decisions["memory"]["overhead_gib_per_gpu"]
+        )
+        between = (weights_and_runtime + decisions["memory"]["required_gib_per_gpu"]) / 2
+        self.assertLess(weights_and_runtime, between)
+        report = run_plan(
+            inventory=tuple(replace(gpu, free_memory_gib=between) for gpu in INVENTORY)
+        )
+        self.assertFalse(report["release_ready"])
+        self.assertNotIn("gpu-placement", report["observed_evidence"])
+
     def test_canary_regression_removes_rollout_evidence(self) -> None:
         regressed = replace(CANDIDATE_RELEASE, p95_tpot_seconds=0.3)
         report = run_plan(candidate_release=regressed)

@@ -41,7 +41,7 @@ from inference_platform.capacity import (
     WorkloadClass,
     plan_capacity,
 )
-from inference_platform.memory import DeploymentMemory, ModelMemory, assess_memory
+from inference_platform.memory import GIB, DeploymentMemory, ModelMemory, assess_memory
 from inference_platform.parallelism import (
     ClusterTopology,
     ParallelModel,
@@ -124,17 +124,32 @@ def run_plan(
 
     capacity = plan_capacity(workloads, BENCHMARK, CAPACITY_REQUIREMENTS)
     memory = assess_memory(MODEL_MEMORY, DEPLOYMENT_MEMORY)
+
+    # Weight size is derived from the one model record rather than restated, and the
+    # per-GPU reservation carries runtime overhead plus the concurrency-sized KV the
+    # memory assessment just computed. Planning a layout against weights alone is the
+    # "the weights fit" mistake this course exists to prevent.
+    weight_gib = MODEL_MEMORY.parameters * MODEL_MEMORY.weight_bits / 8 / GIB
     parallel = plan_parallelism(
-        ParallelModel(30_000_000_000 * 16 / 8 / 1024**3, 6),
+        ParallelModel(weight_gib, DEPLOYMENT_MEMORY.runtime_overhead_gib + memory.kv_gib_per_gpu),
         TOPOLOGY,
         target_replicas=capacity.required_replicas,
+    )
+    gpus_per_replica = (
+        parallel.tensor_parallel * parallel.pipeline_parallel if parallel.feasible else 1
+    )
+    # The memory assessment sharded weights across a declared width. A layout that
+    # spreads them differently invalidates the per-GPU number placement is about to
+    # reserve, so the capstone checks the two agree instead of assuming it.
+    layout_matches_memory_plan = (
+        parallel.feasible and gpus_per_replica == DEPLOYMENT_MEMORY.tensor_parallel_size
     )
     placement = place_replica(
         PlacementRequest(
             "replica-1",
             "model@abc",
-            parallel.tensor_parallel * parallel.pipeline_parallel if parallel.feasible else 1,
-            parallel.memory_gib_per_gpu if parallel.feasible else 40,
+            gpus_per_replica,
+            memory.required_gib_per_gpu if layout_matches_memory_plan else 40,
             frozenset({"bf16", "fast-collective"}),
         ),
         inventory,
@@ -187,7 +202,7 @@ def run_plan(
         evidence.add("memory-fit")
     if capacity.release_ready:
         evidence.add("capacity-plan")
-    if parallel.feasible and parallel.data_parallel >= capacity.required_replicas:
+    if layout_matches_memory_plan and parallel.data_parallel >= capacity.required_replicas:
         evidence.add("parallel-layout")
     if placement.placed:
         evidence.add("gpu-placement")
