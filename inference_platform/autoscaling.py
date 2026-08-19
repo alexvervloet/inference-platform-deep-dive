@@ -58,7 +58,15 @@ def recommend_replicas(
 
     For each observation, rate demand is arrival tokens divided by target usable
     service rate. Queue recovery adds enough replicas to drain observed backlog in
-    the configured window. The newest demand can scale up after a short cooldown.
+    the configured window.
+
+    The two terms discount differently on purpose. Steady arrivals are sized against
+    the utilization-discounted rate, keeping the reserve that absorbs variance. Drain
+    replicas are sized against the full measured rate, on the assumption that clearing
+    a transient backlog is exactly what that reserve is for. That is the optimistic
+    reading: if the backlog is not transient, the drain term under-provisions, and an
+    operator who expects sustained overload should discount it the same way. The
+    newest demand can scale up after a short cooldown.
     Scaling down requires a complete stabilization window whose every observation
     supports the lower target, preventing a brief lull from terminating warm models.
 
