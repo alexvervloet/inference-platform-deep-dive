@@ -17,3 +17,9 @@
 - Expected: a substring assertion would confirm that the TPOT gate caused rollback.
 - Actual: `assertIn` searched for an abbreviated string as an exact tuple member, even though the tuple correctly contained the full deciding message.
 - Next time: use exact membership for stable control codes/messages, or inspect a specific message when intentionally checking a substring; do not blur the two forms.
+
+## A fresh Python 3.13 venv may not contain the declared build backend
+
+- Expected: an editable install with `--no-build-isolation` would verify packaging without network access.
+- Actual: the fresh environment contained `pip` but no `setuptools`, so it could not import `setuptools.build_meta`; the project correctly declares `setuptools>=75`, but fulfilling that declaration needs the normal isolated installer or a pre-provisioned build tool.
+- Next time: distinguish an offline source-tree test (`PYTHONPATH=.`) from a clean installation test; use the documented normal install when network/package mirrors are available, and do not claim `--no-build-isolation` works in a bare environment.
