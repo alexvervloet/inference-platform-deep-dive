@@ -154,9 +154,10 @@ python examples/06_speculative_decoding.py
 ```
 
 Both rounds use identical costs. Only their actual draft/target agreement changes.
-High acceptance amortizes verification; a poor draft spends extra compute to emit one
-verified token. Exact speculative algorithms preserve the target distribution, but a
-particular runtime/model/workload combination still has to earn a speedup.
+Verification covers one position past the draft, so a fully accepted round of four
+returns five tokens and amortizes its cost; a poor draft spends extra compute to emit
+one verified token. Exact speculative algorithms preserve the target distribution, but
+a particular runtime/model/workload combination still has to earn a speedup.
 
 ### 7. Tensor, pipeline, data, and expert parallelism
 
@@ -219,9 +220,11 @@ python examples/12_capacity_and_cost.py
 ```
 
 Each workload contributes burst-adjusted prompt tokens, output tokens, and concurrent
-requests. The largest capacity dimension sets replica count after headroom. Hourly
-price is supplied rather than embedded because provider pricing and discounts change;
-cost pressure never silently reduces the safe fleet size.
+requests. The largest capacity dimension sets replica count after headroom. Rounding to
+whole replicas often ties several dimensions, so the plan returns all of them and names
+the one with the largest unrounded demand. Hourly price is supplied rather than embedded
+because provider pricing and discounts change; cost pressure never silently reduces the
+safe fleet size.
 
 ## Capstone: release an inference fleet plan
 
