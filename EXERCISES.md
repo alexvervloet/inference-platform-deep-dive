@@ -88,6 +88,7 @@ cost, and p95 round latency. Compare two draft models.
 Acceptance criteria:
 
 - Acceptance is computed from actual token agreement.
+- A fully accepted round emits one more token than it drafted.
 - The baseline comparison covers the same emitted tokens.
 - A low-acceptance draft loses even if its individual token cost is small.
 - A verification exception fails the evaluation rather than dropping the round.
@@ -180,6 +181,7 @@ maintenance headroom and a current price supplied as an input.
 Acceptance criteria:
 
 - Prompt, decode, and concurrency requirements are calculated separately.
+- A dimension that only ties after rounding is reported as a tie, not as the winner.
 - The loss scenario, not mean traffic, sets fleet size.
 - A budget violation reports the unsafe required fleet; it never shrinks capacity.
 - Changing price changes cost but not replica demand.
