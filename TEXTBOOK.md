@@ -1,4 +1,4 @@
-# Chapter 22: Inference Platform Engineering
+# Chapter 22: The Memory-and-Queue Scheduler
 
 An LLM server performs matrix operations. An inference platform decides which work may
 reach those operations, where it runs, how requests share finite memory, when capacity
