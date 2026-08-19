@@ -108,10 +108,10 @@ the runtime and configuration you will deploy.
 
 ## 22.5 Prefix caching is a correctness boundary
 
-A shared prefix—system instructions, a document, few-shot examples—can reuse its
-prefill KV blocks. The performance opportunity is largest when prefixes are long,
-stable, and repeated. The correctness key must include every input that changes the
-activation:
+A shared prefix such as system instructions, a document, or few-shot examples can
+reuse its prefill KV blocks. The performance opportunity is largest when prefixes are
+long, stable, and repeated. The correctness key must include every input that changes
+the activation:
 
 - exact token ids and block boundaries;
 - model and tokenizer revisions;

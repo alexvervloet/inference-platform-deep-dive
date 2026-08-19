@@ -16,5 +16,5 @@ requests = (
 
 for request in requests:
     decision = controller.decide(request, now=0, estimated_queue_seconds=1)
-    print(f"{request.identifier}: {decision.action.value} — {decision.reason}")
+    print(f"{request.identifier}: {decision.action.value}: {decision.reason}")
 print(f"reserved live tokens={controller.live_tokens}, queued={controller.queued_requests}")
