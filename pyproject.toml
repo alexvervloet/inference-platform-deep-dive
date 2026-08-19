@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "inference-platform-deep-dive"
+version = "0.1.0"
+description = "Offline-first lessons for engineering LLM inference platforms"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Alex Vervloet" }]
+dependencies = []
+
+[tool.setuptools.packages.find]
+include = ["inference_platform*"]
