@@ -17,7 +17,14 @@ class SpeculativeDecodingTests(unittest.TestCase):
         decision = evaluate_speculation((1, 2, 3, 4), (1, 2, 3, 4), COSTS, 2.0)
         self.assertTrue(decision.enable)
         self.assertEqual(decision.accepted_tokens, 4)
-        self.assertAlmostEqual(decision.estimated_speedup, 4 / 1.4)
+        self.assertAlmostEqual(decision.estimated_speedup, 5 / 1.4)
+
+    def test_fully_accepted_round_emits_the_extra_verified_position(self) -> None:
+        decision = evaluate_speculation((1, 2, 3, 4), (1, 2, 3, 4), COSTS)
+        self.assertEqual(decision.accepted_tokens, 4)
+        self.assertEqual(decision.drafted_tokens, 4)
+        self.assertEqual(decision.emitted_tokens, 5)
+        self.assertEqual(decision.acceptance_rate, 1.0)
 
     def test_low_acceptance_can_make_speculation_slower(self) -> None:
         decision = evaluate_speculation((9, 8, 7, 6), (1, 2, 3, 4), COSTS)
@@ -33,9 +40,12 @@ class SpeculativeDecodingTests(unittest.TestCase):
         self.assertEqual(decision.acceptance_rate, 0.5)
 
     def test_speedup_gate_is_independent_of_token_inputs(self) -> None:
-        result = evaluate_speculation((1, 2), (1, 2), COSTS, minimum_speedup=2.0)
-        self.assertFalse(result.enable)
-        self.assertIn("misses 2.00x", result.reason)
+        lenient = evaluate_speculation((1, 2), (1, 2), COSTS, minimum_speedup=2.0)
+        strict = evaluate_speculation((1, 2), (1, 2), COSTS, minimum_speedup=3.0)
+        self.assertAlmostEqual(lenient.estimated_speedup, strict.estimated_speedup)
+        self.assertTrue(lenient.enable)
+        self.assertFalse(strict.enable)
+        self.assertIn("misses 3.00x", strict.reason)
 
 
 if __name__ == "__main__":

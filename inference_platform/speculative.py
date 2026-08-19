@@ -1,9 +1,11 @@
 """Measure whether draft-token acceptance repays speculative-decoding overhead.
 
-Speculative decoding proposes several cheap draft tokens, verifies them with the
-target model in parallel, accepts the matching prefix, and uses the target token at
-the first mismatch. Exact algorithms preserve the target distribution; performance
-still depends on acceptance and the relative cost of drafting and verification.
+Speculative decoding proposes several cheap draft tokens and verifies them with one
+parallel target pass over every draft position plus the position after the last one.
+It accepts the matching prefix and takes a token from the target model at the first
+mismatch, or from that extra position when the whole draft agrees. Exact algorithms
+preserve the target distribution; performance still depends on acceptance and the
+relative cost of drafting and verification.
 """
 
 from __future__ import annotations
@@ -38,11 +40,12 @@ def evaluate_speculation(
     """Decide from actual agreement and measured costs whether speculation helps.
 
     Agreement is computed token by token until the first mismatch; inputs cannot
-    carry an expected acceptance label. A mismatch still emits the target model's
-    token, so one verification round emits the accepted prefix plus one correction.
-    Full agreement emits the entire draft. The baseline cost covers the same number
-    of emitted tokens, while speculative cost includes every draft token and one
-    verification round.
+    carry an expected acceptance label. One round always emits the accepted prefix
+    plus one more target token: a correction at the first mismatch, or the bonus
+    token from the extra verified position when the whole draft agrees. A round of
+    `k` drafts therefore emits between 1 and `k + 1` tokens. The baseline cost covers
+    that same number of emitted tokens, while speculative cost includes every draft
+    token and one verification round.
 
     The cost model isolates a single round and ignores batching interactions. Enable
     only after measuring these costs and the acceptance distribution for the actual
@@ -66,7 +69,9 @@ def evaluate_speculation(
         if draft != target:
             break
         accepted += 1
-    emitted = accepted if accepted == len(draft_tokens) else accepted + 1
+    # The parallel verification pass covers one position beyond the draft, so a fully
+    # accepted round still emits a bonus target token (Leviathan et al., Algorithm 1).
+    emitted = accepted + 1
     baseline_cost = emitted * costs.baseline_seconds_per_token
     speculative_cost = (
         len(draft_tokens) * costs.draft_seconds_per_token

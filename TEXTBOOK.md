@@ -149,13 +149,19 @@ also illustrates why format support must be checked against actual hardware.
 ## 22.7 Speculative decoding must earn its verification
 
 A draft model proposes multiple tokens cheaply. The target model verifies them in one
-parallel step, accepts a matching prefix, and supplies the first correction when they
-diverge. Correct speculative sampling preserves the target distribution; it does not
-merely trust the smaller model.
+parallel step that covers every draft position plus the position after the last one.
+It accepts the matching prefix and supplies the first correction when they diverge, or
+a bonus token from that extra position when the whole draft agrees. Correct speculative
+sampling preserves the target distribution; it does not merely trust the smaller model.
+
+That extra position is why speculation can win at all. A round of `k` drafts emits
+between 1 and `k + 1` tokens, so a fully accepted round returns more tokens than it
+proposed. Counting only the accepted drafts understates the technique.
 
 For one simplified round:
 
 ```text
+emitted tokens   = accepted draft tokens + 1
 baseline cost    = emitted tokens × target cost/token
 speculative cost = drafted tokens × draft cost/token + target verification cost
 speedup          = baseline cost / speculative cost
