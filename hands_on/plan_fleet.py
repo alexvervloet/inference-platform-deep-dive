@@ -59,7 +59,7 @@ from inference_platform.rollouts import (
 
 WORKLOADS = (
     WorkloadClass("interactive", 1.5, 400, 100, 2.0, 1.5),
-    WorkloadClass("generation", 0.2, 200, 600, 5.0, 2.0),
+    WorkloadClass("generation", 0.5, 200, 600, 5.0, 2.0),
 )
 BENCHMARK = ReplicaBenchmark("staging:model@abc:gpu-x", 1000, 350, 8, 4.25)
 CAPACITY_REQUIREMENTS = CapacityRequirements(2, 8, 0.25, 40)
@@ -172,7 +172,10 @@ def run_plan(
     evidence = {f"workload:{workload.name}" for workload in workloads}
     reasons: dict[str, str] = {
         "memory-fit": memory.reason,
-        "capacity-plan": capacity.bottleneck,
+        "capacity-plan": (
+            f"{capacity.bottleneck} sets {capacity.required_replicas} replicas; "
+            f"binding dimensions: {', '.join(capacity.binding_dimensions)}"
+        ),
         "parallel-layout": parallel.reason,
         "gpu-placement": placement.reason,
         "benign-admission": benign.reason,
