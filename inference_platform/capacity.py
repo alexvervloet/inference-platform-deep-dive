@@ -44,6 +44,7 @@ class CapacityPlan:
     release_ready: bool
     required_replicas: int
     bottleneck: str
+    binding_dimensions: tuple[str, ...]
     prompt_tokens_per_second: float
     output_tokens_per_second: float
     concurrent_requests: float
@@ -63,9 +64,16 @@ def plan_capacity(
     Each workload class contributes burst-adjusted prompt tokens, output tokens, and
     concurrency (Little's Law using its supplied mean service time). Per-replica
     benchmark capacities are discounted by reserved headroom. The maximum of prefill,
-    decode, concurrency, and minimum-replica requirements sets fleet size; the name of
-    that exact constraint is returned. Budget and fleet ceilings gate release after
-    sizing, so the planner never trims an unsafe plan merely to make cost pass.
+    decode, concurrency, and minimum-replica requirements sets fleet size.
+
+    Rounding up to whole replicas routinely makes several dimensions land on the same
+    integer, so every dimension that reaches the chosen count is returned in
+    `binding_dimensions`. `bottleneck` names the one with the largest unrounded demand
+    among them, which is the dimension that would bind first as traffic grows. Reading
+    one name without the tie can credit a constraint that had the most slack, and a
+    plan whose only binding dimension is the replica floor is not workload-sized at
+    all. Budget and fleet ceilings gate release after sizing, so the planner never
+    trims an unsafe plan merely to make cost pass.
 
     Benchmark results and hourly price are inputs on purpose: measure the intended
     model/runtime/hardware and provide a current quote. This arithmetic does not
@@ -88,12 +96,16 @@ def plan_capacity(
     )
     usable = 1 - requirements.reserved_headroom_fraction
     dimensions = {
-        "minimum replica floor": requirements.min_replicas,
-        "prefill tokens": math.ceil(prompt_tps / (benchmark.prefill_tokens_per_second * usable)),
-        "decode tokens": math.ceil(output_tps / (benchmark.output_tokens_per_second * usable)),
-        "request concurrency": math.ceil(concurrency / (benchmark.max_concurrent_requests * usable)),
+        "minimum replica floor": float(requirements.min_replicas),
+        "prefill tokens": prompt_tps / (benchmark.prefill_tokens_per_second * usable),
+        "decode tokens": output_tps / (benchmark.output_tokens_per_second * usable),
+        "request concurrency": concurrency / (benchmark.max_concurrent_requests * usable),
     }
-    bottleneck, replicas = max(dimensions.items(), key=lambda item: (item[1], item[0]))
+    replicas = max(math.ceil(demand) for demand in dimensions.values())
+    binding = tuple(
+        sorted(name for name, demand in dimensions.items() if math.ceil(demand) == replicas)
+    )
+    bottleneck = max(binding, key=lambda name: (dimensions[name], name))
     hourly_cost = replicas * benchmark.hourly_cost
     cost_per_million = hourly_cost / (output_tps * 3600) * 1_000_000
     violations: list[str] = []
@@ -105,6 +117,7 @@ def plan_capacity(
         not violations,
         replicas,
         bottleneck,
+        binding,
         prompt_tps,
         output_tps,
         concurrency,

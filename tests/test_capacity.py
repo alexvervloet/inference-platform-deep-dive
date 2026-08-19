@@ -22,6 +22,28 @@ class CapacityPlanningTests(unittest.TestCase):
         self.assertEqual(plan_capacity((average,), BENCHMARK, REQUIREMENTS).required_replicas, 1)
         self.assertEqual(plan_capacity((burst,), BENCHMARK, REQUIREMENTS).required_replicas, 2)
 
+    def test_rounding_tie_reports_every_binding_dimension(self) -> None:
+        plan = plan_capacity(
+            (WorkloadClass("chat", 1, 100, 100, 1, 1),),
+            BENCHMARK,
+            REQUIREMENTS,
+        )
+        self.assertEqual(plan.required_replicas, 1)
+        self.assertEqual(
+            plan.binding_dimensions,
+            ("decode tokens", "minimum replica floor", "prefill tokens", "request concurrency"),
+        )
+
+    def test_replica_floor_is_named_when_no_workload_dimension_exceeds_it(self) -> None:
+        plan = plan_capacity(
+            (WorkloadClass("trickle", 0.1, 10, 10, 0.5, 1),),
+            BENCHMARK,
+            replace(REQUIREMENTS, min_replicas=3),
+        )
+        self.assertEqual(plan.required_replicas, 3)
+        self.assertEqual(plan.bottleneck, "minimum replica floor")
+        self.assertEqual(plan.binding_dimensions, ("minimum replica floor",))
+
     def test_workload_mix_identifies_decode_as_the_actual_bottleneck(self) -> None:
         plan = plan_capacity(
             (
@@ -32,6 +54,7 @@ class CapacityPlanningTests(unittest.TestCase):
             REQUIREMENTS,
         )
         self.assertEqual(plan.bottleneck, "decode tokens")
+        self.assertEqual(plan.binding_dimensions, ("decode tokens",))
         self.assertEqual(plan.required_replicas, 4)
 
     def test_budget_failure_does_not_shrink_the_required_fleet(self) -> None:
