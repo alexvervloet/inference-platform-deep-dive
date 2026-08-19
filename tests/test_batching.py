@@ -36,6 +36,18 @@ class BatchingTests(unittest.TestCase):
         continuous = simulate_batching(WORKLOAD, 2, BatchMode.CONTINUOUS)
         self.assertLess(continuous.makespan_steps, static.makespan_steps)
 
+    def test_makespan_is_a_span_not_an_absolute_step(self) -> None:
+        shifted = tuple(
+            BatchRequest(item.identifier, item.arrival_step + 100, item.output_tokens)
+            for item in WORKLOAD
+        )
+        for mode in BatchMode:
+            with self.subTest(mode=mode):
+                self.assertEqual(
+                    simulate_batching(shifted, 2, mode).makespan_steps,
+                    simulate_batching(WORKLOAD, 2, mode).makespan_steps,
+                )
+
     def test_rejects_duplicate_identifiers_that_would_overwrite_state(self) -> None:
         with self.assertRaisesRegex(ValueError, "unique"):
             simulate_batching(

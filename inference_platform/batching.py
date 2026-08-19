@@ -50,9 +50,11 @@ def simulate_batching(
     request emits exactly one token per step, so completion times arise from the
     scheduler and request lengths rather than an expected result attached to input.
 
-    The returned wait total counts arrival-to-first-service delay. This is the
-    queueing component of TTFT, not a complete TTFT model; prefill execution is
-    intentionally outside this isolated scheduling lesson.
+    The returned makespan is a span, measured from the first arrival to the last
+    completion, so a workload that starts at a later step is still comparable. The
+    wait total counts arrival-to-first-service delay. This is the queueing component
+    of TTFT, not a complete TTFT model; prefill execution is intentionally outside
+    this isolated scheduling lesson.
     """
 
     if capacity <= 0:
@@ -73,6 +75,7 @@ def simulate_batching(
     first_service: dict[str, int] = {}
     completed: list[Completion] = []
     step = pending[0].arrival_step
+    first_arrival_step = step
 
     while pending or waiting or active:
         while pending and pending[0].arrival_step <= step:
@@ -107,4 +110,4 @@ def simulate_batching(
     waits = sum(
         first_service[request.identifier] - request.arrival_step for request in requests
     )
-    return BatchRun(mode, ordered, step, waits)
+    return BatchRun(mode, ordered, step - first_arrival_step, waits)
