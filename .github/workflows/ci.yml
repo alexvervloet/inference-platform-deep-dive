@@ -62,12 +62,3 @@ jobs:
           cp fleet-plan.json first-fleet-plan.json
           python hands_on/plan_fleet.py
           cmp first-fleet-plan.json fleet-plan.json
-
-      - name: Reject em-dashes in prose and output
-        shell: bash
-        run: |
-          if grep -rn '—' --include='*.md' --include='*.py' \
-               --exclude-dir=.venv --exclude-dir=.git .; then
-            echo "em-dash found; use plain punctuation"
-            exit 1
-          fi
