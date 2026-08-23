@@ -8,7 +8,7 @@
 
 ## A control test must prove its setup reached the intended boundary
 
-- Expected: an “active” request would fill live-token capacity, allowing the next request to exercise the bounded queue.
+- Expected: an "active" request would fill live-token capacity, allowing the next request to exercise the bounded queue.
 - Actual: that setup request exceeded the per-request limit and was shed by an earlier control, so the next request was correctly admitted into otherwise empty capacity.
 - Next time: assert the setup decision before asserting a later boundary, and choose fixtures that visibly satisfy every earlier precondition in the decision order.
 
@@ -30,7 +30,7 @@
 - Actual: the verification pass covers every draft position *plus the one after it*, so a fully accepted round of `k` drafts emits `k + 1` tokens. Special-casing full acceptance to emit `k` understated the speedup exactly where speculation pays off, in a lesson that cites the paper defining the round.
 - Next time: when an example implements a published algorithm, write the step count from the paper's own procedure into a comment beside the code, so a later reader checks the arithmetic against the source rather than against intuition.
 
-## A rounded metric ties, and the tie-break will quietly name a winner
+## A rounded metric ties, and the tie-break names a winner nobody chose
 
 - Expected: taking the maximum of prefill, decode, concurrency, and floor requirements would name the dimension that binds fleet size.
 - Actual: `ceil()` to whole replicas put all four on 2, and the alphabetical tie-break reported "request concurrency", the dimension with the *most* slack (1.08 raw against decode's 1.77). The capstone's headline reason was an artifact of sorting.
