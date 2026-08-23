@@ -47,7 +47,7 @@ Acceptance criteria:
 - Bounded chunks enforce an explicit maximum decode stall.
 
 Stretch: implement starvation prevention and demonstrate it with a sustained arrival
-stream rather than a hard-coded “starved” result.
+stream rather than a hard-coded "starved" result.
 
 ## 4. Add prefix-cache eviction and invalidation
 
@@ -130,7 +130,7 @@ the estimate explicitly non-binding.
 ## 9. Prevent GPU topology fragmentation
 
 Schedule a sequence of one-, two-, and four-GPU replicas. Compare tight-fit packing
-with a naive “most free memory first” policy.
+with a naive "most free memory first" policy.
 
 Acceptance criteria:
 
