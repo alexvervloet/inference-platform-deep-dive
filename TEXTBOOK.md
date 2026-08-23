@@ -66,7 +66,7 @@ the evidence that should refine the arithmetic.
 
 ## 22.3 Measure the service users experience
 
-Four metrics must not collapse into “latency”:
+Four metrics must not collapse into "latency":
 
 - **TTFT**: arrival to first output token. Queueing and prefill dominate it.
 - **TPOT**: average time between output tokens after the first. Decode scheduling and
@@ -120,12 +120,12 @@ the activation:
 - tenant, ACL, or security domain when cached state reflects protected content.
 
 A text hash is insufficient because tokenizer revisions can change token ids. A
-caller-provided “same prefix” label is not evidence. Cache lookup computes identity
+caller-provided "same prefix" label is not evidence. Cache lookup computes identity
 from actual execution inputs and verifies the exact prefix. Invalidation, eviction,
 and hit-rate metrics then become operational policy. A high hit rate is not inherently
 good if it crosses an authorization boundary.
 
-## 22.6 Quantization is a vector of trade-offs
+## 22.6 Quantization trades several things at once
 
 Reducing weight precision usually reduces weight storage. It may also improve memory
 bandwidth or permit larger batches, but kernels, dequantization, hardware support,
@@ -146,7 +146,7 @@ large regression. Passing permits a canary or staging test; it is not direct pro
 The current vLLM [quantization matrix](https://docs.vllm.ai/en/latest/features/quantization/)
 also illustrates why format support must be checked against actual hardware.
 
-## 22.7 Speculative decoding must earn its verification
+## 22.7 Speculative decoding has to pay back its verification
 
 A draft model proposes multiple tokens cheaply. The target model verifies them in one
 parallel step that covers every draft position plus the position after the last one.
@@ -229,7 +229,7 @@ prevent starvation and abusive priority selection.
 
 ## 22.10 GPU-aware scheduling and fragmentation
 
-“Two free GPUs” says little. A replica may require:
+"Two free GPUs" says little. A replica may require:
 
 - enough free memory on every device;
 - a supported dtype, quantization kernel, compute capability, or partition type;
