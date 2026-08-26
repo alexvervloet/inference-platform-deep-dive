@@ -3,7 +3,7 @@
 Bit width predicts weight storage approximately; it does not predict kernel support,
 KV-cache size, end-to-end memory, quality, or speed. A format should therefore earn
 staging through measurements taken on the intended hardware and workload rather than
-through a claim such as “four bit means four times faster.”
+through a claim such as "four bit means four times faster."
 """
 
 from __future__ import annotations
