@@ -4,7 +4,7 @@ Tensor parallelism splits layer operations and pays frequent collective-communic
 cost. Pipeline parallelism splits layer ranges and pays stage bubbles. Data parallelism
 duplicates a complete replica for concurrency. Expert parallelism distributes MoE
 experts. These axes solve different constraints and should not be treated as a single
-“use more GPUs” switch.
+"use more GPUs" switch.
 """
 
 from __future__ import annotations
