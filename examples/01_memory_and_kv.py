@@ -22,6 +22,8 @@ assessment = assess_memory(model, deployment)
 
 print(f"weights/GPU:  {assessment.weight_gib_per_gpu:.2f} GiB")
 print(f"KV cache/GPU: {assessment.kv_gib_per_gpu:.2f} GiB")
+print(f"overhead/GPU: {assessment.overhead_gib_per_gpu:.2f} GiB")
 print(f"required/GPU: {assessment.required_gib_per_gpu:.2f} GiB")
+print(f"usable/GPU:   {assessment.usable_gib_per_gpu:.2f} GiB")
 print(f"maximum concurrency under this bound: {assessment.max_concurrency}")
 print(f"decision: {'FIT' if assessment.fits else 'NO FIT'}: {assessment.reason}")
