@@ -290,10 +290,10 @@ inference_platform/  pure decision modules
 examples/            one isolated runnable lesson per concept
 hands_on/            integrated fleet-planning capstone
 tests/               unit, negative-path, and anti-vacuity evidence
-TEXTBOOK.md           Chapter 22 lecture
-EXERCISES.md          extensions with acceptance criteria
-check_setup.py        offline environment and capstone verification
-LESSONS.md            surprises encountered while building the course
+TEXTBOOK.md          Chapter 22 lecture
+EXERCISES.md         extensions with acceptance criteria
+check_setup.py       offline environment and capstone verification
+LESSONS.md           surprises encountered while building the course
 ```
 
 ## License
