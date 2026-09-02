@@ -56,6 +56,22 @@ class AdmissionControllerTests(unittest.TestCase):
         self.assertEqual(shed.action, AdmissionAction.SHED)
         self.assertIn("bounded queue", shed.reason)
 
+    def test_a_shed_decision_cannot_be_released_back_into_contention(self) -> None:
+        request = AdmissionRequest("huge", 50, 50, deadline_at=10)
+        self.assertEqual(
+            self.controller.decide(request, now=0, estimated_queue_seconds=0).action,
+            AdmissionAction.SHED,
+        )
+        with self.assertRaisesRegex(ValueError, "permanent"):
+            self.controller.release("huge")
+
+    def test_releasing_an_admitted_request_returns_its_reserved_tokens(self) -> None:
+        request = AdmissionRequest("normal", 20, 30, deadline_at=10)
+        self.controller.decide(request, now=0, estimated_queue_seconds=1)
+        self.assertEqual(self.controller.live_tokens, 50)
+        self.controller.release("normal")
+        self.assertEqual(self.controller.live_tokens, 0)
+
     def test_predicted_deadline_failure_is_decided_before_allocation(self) -> None:
         decision = self.controller.decide(
             AdmissionRequest("late", 10, 10, deadline_at=2),

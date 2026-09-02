@@ -76,12 +76,12 @@ class AdmissionController:
         SLO guarantee. Production controllers should segment estimates by workload,
         account for preemption, and expose retry/backoff behavior to clients.
 
-        Decisions are retained by request id until `release`, and a shed request is
-        never released, so its rejection is permanent and its entry is never reclaimed.
-        That keeps a retry storm from re-rolling the dice on a request already refused,
-        but a real controller needs the opposite behavior too: a bounded time-to-live
-        so a client that backs off and retries can be judged against current capacity,
-        and eviction so the table cannot grow with every rejected request.
+        Decisions are retained by request id until `release`, which refuses to release
+        a shed one, so a rejection is permanent and its entry is never reclaimed. That
+        keeps a retry storm from re-rolling the dice on a request already refused, but
+        a real controller needs the opposite behavior too: a bounded time-to-live so a
+        client that backs off and retries can be judged against current capacity, and
+        eviction so the table cannot grow with every rejected request.
         """
 
         if request.identifier in self._decisions:
@@ -123,11 +123,23 @@ class AdmissionController:
         return decision
 
     def release(self, request_identifier: str) -> None:
-        """Release the reservation associated with a completed or cancelled request."""
+        """Release the reservation associated with a completed or cancelled request.
 
-        decision = self._decisions.pop(request_identifier, None)
+        A shed request holds no reservation, so releasing one would free nothing and
+        would drop the record that makes its rejection permanent. The next retry of
+        that id would then be judged again against whatever capacity happened to
+        exist, which is the retry storm `decide` retains the decision to prevent.
+        Refusing here keeps that invariant in the code rather than in a comment.
+        """
+
+        decision = self._decisions.get(request_identifier)
         if decision is None:
             raise KeyError(request_identifier)
+        if decision.action is AdmissionAction.SHED:
+            raise ValueError(
+                f"request {request_identifier!r} was shed; a shed decision is permanent"
+            )
+        del self._decisions[request_identifier]
         if decision.action is AdmissionAction.ADMIT:
             self.live_tokens -= decision.reserved_tokens
         elif decision.action is AdmissionAction.QUEUE:
