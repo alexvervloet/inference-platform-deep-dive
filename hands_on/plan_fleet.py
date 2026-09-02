@@ -47,7 +47,12 @@ from inference_platform.parallelism import (
     ParallelModel,
     plan_parallelism,
 )
-from inference_platform.placement import GPU, PlacementRequest, place_replica
+from inference_platform.placement import (
+    GPU,
+    PlacementDecision,
+    PlacementRequest,
+    place_replica,
+)
 from inference_platform.rollouts import (
     ReleaseMeasurement,
     ReleaseRequirements,
@@ -135,25 +140,33 @@ def run_plan(
         TOPOLOGY,
         target_replicas=capacity.required_replicas,
     )
-    gpus_per_replica = (
-        parallel.tensor_parallel * parallel.pipeline_parallel if parallel.feasible else 1
-    )
+    gpus_per_replica = parallel.tensor_parallel * parallel.pipeline_parallel
     # The memory assessment sharded weights across a declared width. A layout that
     # spreads them differently invalidates the per-GPU number placement is about to
     # reserve, so the capstone checks the two agree instead of assuming it.
     layout_matches_memory_plan = (
         parallel.feasible and gpus_per_replica == DEPLOYMENT_MEMORY.tensor_parallel_size
     )
-    placement = place_replica(
-        PlacementRequest(
-            "replica-1",
-            "model@abc",
-            gpus_per_replica,
-            memory.required_gib_per_gpu if layout_matches_memory_plan else 40,
-            frozenset({"bf16", "fast-collective"}),
-        ),
-        inventory,
-    )
+    # Without a usable layout there is no group shape to ask for. Substituting a
+    # one-GPU request would let placement report success for a replica that cannot
+    # exist, and this report is supposed to record evidence that was earned.
+    if layout_matches_memory_plan:
+        placement = place_replica(
+            PlacementRequest(
+                "replica-1",
+                "model@abc",
+                gpus_per_replica,
+                memory.required_gib_per_gpu,
+                frozenset({"bf16", "fast-collective"}),
+            ),
+            inventory,
+        )
+    else:
+        placement = PlacementDecision(
+            False,
+            (),
+            "no layout matching the memory plan, so no GPU group was requested",
+        )
 
     admission = AdmissionController(AdmissionPolicy(8192, 4, 4096))
     benign = admission.decide(

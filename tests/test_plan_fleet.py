@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from unittest import mock
 
+from hands_on import plan_fleet
 from hands_on.plan_fleet import (
     CANDIDATE_RELEASE,
     INVENTORY,
@@ -16,6 +17,7 @@ from hands_on.plan_fleet import (
     run_plan,
 )
 from inference_platform.admission import AdmissionAction, AdmissionDecision, AdmissionController
+from inference_platform.parallelism import ClusterTopology
 
 
 class FleetPlanTests(unittest.TestCase):
@@ -69,6 +71,23 @@ class FleetPlanTests(unittest.TestCase):
         )
         self.assertFalse(report["release_ready"])
         self.assertNotIn("gpu-placement", report["observed_evidence"])
+
+    def test_a_layout_the_memory_plan_does_not_cover_earns_no_placement(self) -> None:
+        # Smaller GPUs force a three-way split, which no longer matches the width the
+        # memory assessment sharded weights across. There is then no group shape to
+        # ask for, and asking for a convenient one-GPU group would manufacture
+        # placement evidence for a replica that cannot exist.
+        cramped = ClusterTopology(2, 4, 36, 0.9, True)
+        with mock.patch.object(plan_fleet, "TOPOLOGY", cramped):
+            report = run_plan()
+        parallelism = report["decisions"]["parallelism"]
+        self.assertNotEqual(
+            parallelism["tensor_parallel"] * parallelism["pipeline_parallel"],
+            plan_fleet.DEPLOYMENT_MEMORY.tensor_parallel_size,
+        )
+        self.assertFalse(report["release_ready"])
+        self.assertNotIn("gpu-placement", report["observed_evidence"])
+        self.assertIn("no layout", report["deciding_reasons"]["gpu-placement"])
 
     def test_canary_regression_removes_rollout_evidence(self) -> None:
         regressed = replace(CANDIDATE_RELEASE, p95_tpot_seconds=0.3)
