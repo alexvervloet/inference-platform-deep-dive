@@ -47,6 +47,12 @@ def evaluate_speculation(
     that same number of emitted tokens, while speculative cost includes every draft
     token and one verification round.
 
+    `target_tokens` must therefore be at least one longer than `draft_tokens`. That
+    extra entry is the position the verification pass covers past the last draft,
+    and it is what a fully accepted round emits. Accepting a target of exactly `k`
+    would let the function report a `k + 1`st token that the caller never supplied,
+    which is the formula asserting its own evidence.
+
     The cost model isolates a single round and ignores batching interactions. Enable
     only after measuring these costs and the acceptance distribution for the actual
     draft/target pair and workload in staging.
@@ -54,8 +60,10 @@ def evaluate_speculation(
 
     if not draft_tokens or not target_tokens:
         raise ValueError("draft and target token sequences are required")
-    if len(draft_tokens) > len(target_tokens):
-        raise ValueError("target sequence must cover every draft position")
+    if len(target_tokens) <= len(draft_tokens):
+        raise ValueError(
+            "target sequence must cover every draft position plus the one after it"
+        )
     if min(
         costs.baseline_seconds_per_token,
         costs.draft_seconds_per_token,

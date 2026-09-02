@@ -14,34 +14,38 @@ COSTS = SpeculationCosts(
 
 class SpeculativeDecodingTests(unittest.TestCase):
     def test_high_actual_acceptance_can_repay_a_verification_round(self) -> None:
-        decision = evaluate_speculation((1, 2, 3, 4), (1, 2, 3, 4), COSTS, 2.0)
+        decision = evaluate_speculation((1, 2, 3, 4), (1, 2, 3, 4, 5), COSTS, 2.0)
         self.assertTrue(decision.enable)
         self.assertEqual(decision.accepted_tokens, 4)
         self.assertAlmostEqual(decision.estimated_speedup, 5 / 1.4)
 
     def test_fully_accepted_round_emits_the_extra_verified_position(self) -> None:
-        decision = evaluate_speculation((1, 2, 3, 4), (1, 2, 3, 4), COSTS)
+        decision = evaluate_speculation((1, 2, 3, 4), (1, 2, 3, 4, 5), COSTS)
         self.assertEqual(decision.accepted_tokens, 4)
         self.assertEqual(decision.drafted_tokens, 4)
         self.assertEqual(decision.emitted_tokens, 5)
         self.assertEqual(decision.acceptance_rate, 1.0)
 
     def test_low_acceptance_can_make_speculation_slower(self) -> None:
-        decision = evaluate_speculation((9, 8, 7, 6), (1, 2, 3, 4), COSTS)
+        decision = evaluate_speculation((9, 8, 7, 6), (1, 2, 3, 4, 5), COSTS)
         self.assertFalse(decision.enable)
         self.assertEqual(decision.accepted_tokens, 0)
         self.assertEqual(decision.emitted_tokens, 1)
         self.assertLess(decision.estimated_speedup, 1)
 
     def test_first_mismatch_emits_verified_target_token_after_accepted_prefix(self) -> None:
-        decision = evaluate_speculation((1, 2, 9, 9), (1, 2, 3, 4), COSTS)
+        decision = evaluate_speculation((1, 2, 9, 9), (1, 2, 3, 4, 5), COSTS)
         self.assertEqual(decision.accepted_tokens, 2)
         self.assertEqual(decision.emitted_tokens, 3)
         self.assertEqual(decision.acceptance_rate, 0.5)
 
+    def test_bonus_token_must_come_from_a_supplied_verified_position(self) -> None:
+        with self.assertRaisesRegex(ValueError, "the one after it"):
+            evaluate_speculation((1, 2, 3, 4), (1, 2, 3, 4), COSTS)
+
     def test_speedup_gate_is_independent_of_token_inputs(self) -> None:
-        lenient = evaluate_speculation((1, 2), (1, 2), COSTS, minimum_speedup=2.0)
-        strict = evaluate_speculation((1, 2), (1, 2), COSTS, minimum_speedup=3.0)
+        lenient = evaluate_speculation((1, 2), (1, 2, 3), COSTS, minimum_speedup=2.0)
+        strict = evaluate_speculation((1, 2), (1, 2, 3), COSTS, minimum_speedup=3.0)
         self.assertAlmostEqual(lenient.estimated_speedup, strict.estimated_speedup)
         self.assertTrue(lenient.enable)
         self.assertFalse(strict.enable)
