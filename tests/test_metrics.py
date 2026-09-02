@@ -46,6 +46,13 @@ class ServiceMetricTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "impossible timestamps"):
             evaluate_service((RequestTrace("r1", 1, 0, 2, 2),), OBJECTIVES)
 
+    def test_zero_length_window_is_rejected_rather_than_passing_every_objective(self) -> None:
+        with self.assertRaisesRegex(ValueError, "no duration"):
+            evaluate_service(
+                (RequestTrace("r1", 5.0, 5.0, 5.0, 3),),
+                ServiceObjectives(1, 1, 1, 1_000_000),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

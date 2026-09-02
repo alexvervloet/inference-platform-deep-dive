@@ -51,6 +51,9 @@ def evaluate_service(
     latency is already represented by TTFT; a one-token response has TPOT zero.
     Throughput covers the full interval from first arrival to last completion and
     therefore includes idle and queue time rather than summing per-request rates.
+    A window of zero length is rejected: every trace would have to arrive and finish
+    at one instant while emitting tokens, and reporting infinite throughput for it
+    would pass any minimum a caller declared.
 
     This function evaluates supplied observations; it does not claim that a short
     trace is statistically representative. Production gates also need a deliberate
@@ -92,7 +95,9 @@ def evaluate_service(
     window = max(trace.completed_at for trace in traces) - min(
         trace.arrived_at for trace in traces
     )
-    throughput = sum(trace.output_tokens for trace in traces) / window if window else math.inf
+    if window <= 0:
+        raise ValueError("the observation window has no duration; throughput is undefined")
+    throughput = sum(trace.output_tokens for trace in traces) / window
 
     violations: list[str] = []
     if p95_ttft > objectives.max_p95_ttft_seconds:
