@@ -70,6 +70,15 @@ def recommend_replicas(
     Scaling down requires a complete stabilization window whose every observation
     supports the lower target, preventing a brief lull from terminating warm models.
 
+    Whatever the loop decides, the returned target is clamped to the policy's replica
+    bounds. The demand calculation is already clamped, but a target can also be carried
+    forward unchanged from `state.desired_replicas`, and that value arrives from the
+    cluster rather than from this function. Lowering a fleet ceiling is an ordinary
+    operation, and without the final clamp a controller that declined to move would keep
+    returning the old count while reporting only that its window was incomplete. When
+    the clamp changes the answer it says so, because a bound that silently overrides a
+    control decision is worse than one that argues with it.
+
     `cpu_utilization` is retained in the observation to make its non-authority visible:
     it does not affect the decision. Warming replicas count toward the existing
     desired target but not the returned ready throughput. This is deterministic
@@ -102,6 +111,13 @@ def recommend_replicas(
             reason = "lower token demand persisted for the full stabilization window"
         else:
             reason = "scale-down held for an incomplete or unstable window"
+
+    bounded = min(policy.max_replicas, max(policy.min_replicas, target))
+    if bounded != target:
+        reason = (
+            f"{reason}; clamped from {target} to the policy bound {bounded}"
+        )
+        target = bounded
 
     ready_capacity = (
         state.ready_replicas

@@ -44,6 +44,28 @@ class AutoscalingTests(unittest.TestCase):
         self.assertEqual(decision.target_replicas, 2)
         self.assertEqual(decision.ready_capacity_tokens_per_second, 80)
 
+    def test_a_declined_move_cannot_carry_a_target_past_the_fleet_ceiling(self) -> None:
+        policy = AutoscalingPolicy(2, 4, 100, 1.0, 10, 5, 60)
+        decision = recommend_replicas(
+            (ScaleObservation(95, 0, 10, 0.1),),
+            ScaleState(9, 9, 0, 0),
+            policy,
+            now=100,
+        )
+        self.assertEqual(decision.target_replicas, 4)
+        self.assertIn("clamped from 9", decision.reason)
+
+    def test_a_declined_move_cannot_carry_a_target_below_the_replica_floor(self) -> None:
+        policy = AutoscalingPolicy(2, 4, 100, 1.0, 10, 5, 60)
+        decision = recommend_replicas(
+            (ScaleObservation(100, 0, 10, 0.1),),
+            ScaleState(1, 1, 0, 99),
+            policy,
+            now=100,
+        )
+        self.assertEqual(decision.target_replicas, 2)
+        self.assertIn("inside cooldown", decision.reason)
+
     def test_scale_down_requires_a_complete_stable_window(self) -> None:
         complete = recommend_replicas(
             (ScaleObservation(0, 0, 20, 0.1), ScaleObservation(60, 0, 20, 0.1)),
