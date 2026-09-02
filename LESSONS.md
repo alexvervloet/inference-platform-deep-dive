@@ -47,3 +47,27 @@
 - Expected: `makespan_steps` measured the length of the simulated run.
 - Actual: it returned the final step counter. Every fixture arrived at step 0, so it read correctly, and the exercise that asks learners to add arrival streams is exactly where it would stop.
 - Next time: test a time-valued result under a shifted origin. A quantity that claims to be a duration should be invariant when every input timestamp moves by the same amount.
+
+## Correcting the arithmetic is not the same as correcting the evidence
+
+- Expected: the earlier fix for speculative token accounting was finished when `emitted` became `accepted + 1` and the tests agreed.
+- Actual: the fixtures still passed a target sequence exactly as long as the draft, so in the fully accepted case the bonus token came from the formula rather than from any supplied position. The validation permitted it, the example showed it, and every assertion passed, because the tests had been written to match the corrected code rather than to supply the input the correction described.
+- Next time: after fixing a calculation, check the fixture that feeds it. A rule that reads a position past the end of its input is a rule grading its own homework, and the tests will not notice, because they were updated in the same pass.
+
+## A clamp on the computed value is not a clamp on the returned one
+
+- Expected: `min_replicas` and `max_replicas` bounded the autoscaler, because `_demand` clamps to them.
+- Actual: the control loop can also return `state.desired_replicas` untouched, and that number arrives from the cluster. Lowering a fleet ceiling, an ordinary operation, left the controller returning the old count with a reason mentioning only its stabilization window. The property test that would have caught it drew `desired_replicas` from inside the policy bounds, so it never asked the question.
+- Next time: apply a declared bound at the point of return, not only at the point of calculation, and when generating inputs for a property, generate the ones that violate the invariant you are asserting rather than the ones the happy path produces.
+
+## A fallback default lets a control report success it never earned
+
+- Expected: when no parallel layout matched the memory plan, the capstone's placement step would fail along with it.
+- Actual: it substituted a one-GPU request at a hardcoded 40 GiB, which every GPU in the fixture satisfied, so the report recorded `gpu-placement` as earned for a replica that had no layout at all. The release gate still failed on the missing layout evidence, which is exactly why nothing surfaced it.
+- Next time: when an input is missing, decline to run the control and say so. A substituted default turns "we could not ask the question" into "the answer was yes", and an unrelated failing gate will hide that for as long as it keeps failing.
+
+## A claim proven only in a test is not proven to the reader
+
+- Expected: the README described each lesson accurately, because the behavior it described was covered by tests.
+- Actual: four claims were true of the module and invisible in the lesson the README attached them to. The memory lesson advertised separating runtime overhead and usable VRAM and printed neither, the autoscaling fixture carried no warming replica, the capacity fixture produced no rounding tie, and the speculation lesson printed no token counts. Each was demonstrated in `tests/`, where a learner following the README's own instructions does not look.
+- Next time: read each README sentence next to the output of the command it sits under. A test proves the code; only the printed lesson proves it to the person the sentence was written for.
