@@ -15,10 +15,16 @@ observation = ScaleObservation(
     arrival_tokens_per_second=160,
     cpu_utilization=0.12,
 )
-state = ScaleState(desired_replicas=1, ready_replicas=1, warming_replicas=0, last_scale_at=0)
+state = ScaleState(desired_replicas=2, ready_replicas=1, warming_replicas=1, last_scale_at=0)
 decision = recommend_replicas((observation,), state, policy, now=100)
 
+print(f"desired: {state.desired_replicas} replicas")
+print(f"  of which ready: {state.ready_replicas}, still warming: {state.warming_replicas}")
 print(f"calculated demand: {decision.calculated_demand_replicas} replicas")
 print(f"target: {decision.target_replicas} replicas")
 print(f"ready serving capacity: {decision.ready_capacity_tokens_per_second:.0f} tokens/s")
 print(decision.reason)
+print(
+    "The warming replica counts toward desired capacity and serves nothing. "
+    "Ready capacity covers one replica, not two."
+)
